@@ -1,36 +1,41 @@
+// app.js
+
+require("dotenv").config();
+
 const express = require("express");
-const bodyParser = require("body-parser");
-const koneksi = require("./config/database");
-const app = express();
 const cors = require("cors");
+const { initDatabase } = require("./config/database");
+
+const app = express();
 const PORT = process.env.PORT || 5000;
+const HOST = process.env.HOST || "0.0.0.0";
 
-//set body-parser
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: false }));
+// Middleware
+app.use(cors());
+app.use(express.json());
+app.use(express.urlencoded({ extended: false }));
 
-//create data || Insert data ()
-/* app.post("/", (req, res) => {
-  //buat variabel penampung data & query SQL
-  const data = { ...req.body };
-  const querySql = "INSERT into dbpn_anggota SET ?";
-
-  //run Query
-  koneksi.query(querySql, data, (err, rows, field) => {
-    //error handling
-    if (err) {
-      return res
-        .status(500)
-        .json({ message: "Gagal memasukan data !", error: err });
-    }
-    //jika request berhasil
-    res.status(201).json({ success: true, message: "Berhasil insert data!" });
-  });
-}); */
-// add routes
+// Routes
 const router = require("./routes/router.js");
 app.use("/", router);
-//untuk server nya
-app.listen(PORT, "192.168.43.166", () =>
-  console.log(`Server running at port: ${PORT}`)
-);
+
+// Global error handler
+app.use((err, req, res, next) => {
+  console.error("Unhandled error:", err);
+  res.status(500).json({
+    msg: "Internal server error",
+    error: process.env.NODE_ENV === "development" ? err.message : undefined,
+  });
+});
+
+// Initialize database lalu start server
+initDatabase()
+  .then(() => {
+    app.listen(PORT, HOST, () => {
+      console.log(`Server running at http://${HOST}:${PORT}`);
+    });
+  })
+  .catch((err) => {
+    console.error("Gagal inisialisasi database:", err);
+    process.exit(1);
+  });
